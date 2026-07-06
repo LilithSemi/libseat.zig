@@ -1,0 +1,13 @@
+.{
+    .name = .libseat,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.16.0",
+    .fingerprint = 0x16b6a2a73c4a2ab,
+    .dependencies = .{
+        .dbus = .{
+            .url = "git+https://github.com/Midstall/dbus.zig#53aad91082cbb832d6797e41154dcac3a75dda6b",
+            .hash = "dbus-0.1.0-8F4MwPF1AwDmksf5BNaTkaEnz0EMY5WkDJM98SvQ6UJg",
+        },
+    },
+    .paths = .{ "build.zig.zon", "build.zig", "src", "tools" },
+}
