@@ -49,7 +49,7 @@ pub const Backend = struct {
     active: bool = false,
     initial_setup: bool = true,
 
-    pub fn open(gpa: Allocator, owner: *seat_mod.Seat) Error!*Backend {
+    pub fn open(gpa: Allocator, io: std.Io, owner: *seat_mod.Seat) Error!*Backend {
         // A logind session is required. Without one this backend does not apply.
         var id_buf: [64]u8 = undefined;
         var seat_buf: [64]u8 = undefined;
@@ -57,12 +57,12 @@ pub const Backend = struct {
         const seat_id = env.get(&seat_buf, "XDG_SEAT") orelse "seat0";
 
         var bus_buf: [256]u8 = undefined;
-        return openWith(gpa, owner, systemBusPath(&bus_buf), false, session_id, seat_id);
+        return openWith(gpa, io, owner, systemBusPath(&bus_buf), false, session_id, seat_id);
     }
 
     /// Connect to a specific bus with explicit session/seat ids. Used by `open`
     /// after reading the environment, and directly by tests against a mock bus.
-    pub fn openWith(gpa: Allocator, owner: *seat_mod.Seat, bus_path: []const u8, abstract: bool, session_id: []const u8, seat_id: []const u8) Error!*Backend {
+    pub fn openWith(gpa: Allocator, io: std.Io, owner: *seat_mod.Seat, bus_path: []const u8, abstract: bool, session_id: []const u8, seat_id: []const u8) Error!*Backend {
         const self = gpa.create(Backend) catch return Error.OutOfMemory;
         errdefer gpa.destroy(self);
         self.* = .{
@@ -81,7 +81,7 @@ pub const Backend = struct {
         self.loop = EventLoop.init(gpa) catch return Error.ConnectionFailed;
         errdefer self.loop.deinit();
 
-        self.bus = Bus.connectUnix(gpa, &self.loop, bus_path, abstract, linux.getuid()) catch
+        self.bus = Bus.connectUnix(gpa, &self.loop, io, bus_path, abstract, linux.getuid()) catch
             return Error.ConnectionFailed;
         errdefer self.bus.deinit();
 
@@ -503,7 +503,10 @@ test "logind backend talks to a mock login1 over the bus" {
     // Daemon on its own thread.
     var dloop = try EventLoop.init(gpa);
     defer dloop.deinit();
-    const d = try Daemon.init(gpa, &dloop);
+    var iot: std.Io.Threaded = .init(gpa, .{});
+    defer iot.deinit();
+    const io = iot.io();
+    const d = try Daemon.init(gpa, &dloop, io);
     defer d.deinit();
     var name_buf: [64]u8 = undefined;
     const sock = try std.fmt.bufPrint(&name_buf, "libseat-logind-{d}", .{linux.getpid()});
@@ -518,7 +521,7 @@ test "logind backend talks to a mock login1 over the bus" {
     var mloop = try EventLoop.init(gpa);
     defer mloop.deinit();
     var mock = MockLogind{};
-    const mbus = connectRetry(gpa, &mloop, sock, linux.getuid()) catch return error.SkipZigTest;
+    const mbus = connectRetry(gpa, &mloop, io, sock, linux.getuid()) catch return error.SkipZigTest;
     defer mbus.deinit();
 
     const manager_methods = [_]object.Method{
@@ -567,7 +570,7 @@ test "logind backend talks to a mock login1 over the bus" {
     var ctx = LogindCtx{};
     const seat = gpa.create(seat_mod.Seat) catch unreachable;
     seat.* = .{ .gpa = gpa, .listener = &logind_listener, .userdata = &ctx, .backend = undefined };
-    const be = openWithRetry(gpa, seat, sock) catch {
+    const be = openWithRetry(gpa, io, seat, sock) catch {
         gpa.destroy(seat);
         stop = true;
         mthread.join();
@@ -596,18 +599,18 @@ fn setDone(ctx: ?*anyopaque, conn: *Connection, reply: ?*const Message) void {
     f.* = true;
 }
 
-fn connectRetry(gpa: Allocator, loop: *EventLoop, sock: []const u8, uid: u32) !*Bus {
+fn connectRetry(gpa: Allocator, loop: *EventLoop, io: std.Io, sock: []const u8, uid: u32) !*Bus {
     var attempt: usize = 0;
     while (attempt < 20) : (attempt += 1) {
-        if (Bus.connectUnix(gpa, loop, sock, true, uid)) |bus| return bus else |_| {}
+        if (Bus.connectUnix(gpa, loop, io, sock, true, uid)) |bus| return bus else |_| {}
     }
     return error.ConnectFailed;
 }
 
-fn openWithRetry(gpa: Allocator, seat: *seat_mod.Seat, sock: []const u8) !*Backend {
+fn openWithRetry(gpa: Allocator, io: std.Io, seat: *seat_mod.Seat, sock: []const u8) !*Backend {
     var attempt: usize = 0;
     while (attempt < 20) : (attempt += 1) {
-        if (Backend.openWith(gpa, seat, sock, true, "1", "seat0")) |be| return be else |_| {}
+        if (Backend.openWith(gpa, io, seat, sock, true, "1", "seat0")) |be| return be else |_| {}
     }
     return error.ConnectFailed;
 }

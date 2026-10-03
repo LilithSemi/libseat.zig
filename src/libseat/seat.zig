@@ -34,7 +34,7 @@ pub const Seat = struct {
 
     /// Open a seat, selecting a backend. `LIBSEAT_BACKEND` forces one. Otherwise
     /// the backends are tried in order and the first that connects wins.
-    pub fn open(gpa: Allocator, listener: *const Listener, userdata: ?*anyopaque) Error!*Seat {
+    pub fn open(gpa: Allocator, io: std.Io, listener: *const Listener, userdata: ?*anyopaque) Error!*Seat {
         var forced_buf: [32]u8 = undefined;
         const forced = env.get(&forced_buf, "LIBSEAT_BACKEND");
         const wants = struct {
@@ -48,7 +48,7 @@ pub const Seat = struct {
             if (forced != null) return Error.NoBackend;
         }
         if (wants(forced, "logind")) {
-            if (openLogind(gpa, listener, userdata)) |s| return s else |_| {}
+            if (openLogind(gpa, io, listener, userdata)) |s| return s else |_| {}
             if (forced != null) return Error.NoBackend;
         }
         if (wants(forced, "builtin")) {
@@ -65,12 +65,12 @@ pub const Seat = struct {
         return openFd(gpa, listener, userdata, fd);
     }
 
-    fn openLogind(gpa: Allocator, listener: *const Listener, userdata: ?*anyopaque) Error!*Seat {
+    fn openLogind(gpa: Allocator, io: std.Io, listener: *const Listener, userdata: ?*anyopaque) Error!*Seat {
         const self = gpa.create(Seat) catch return Error.OutOfMemory;
         errdefer gpa.destroy(self);
         self.* = .{ .gpa = gpa, .listener = listener, .userdata = userdata, .backend = undefined };
 
-        const be = try logind.Backend.open(gpa, self);
+        const be = try logind.Backend.open(gpa, io, self);
         self.backend = .{ .logind = be };
         return self;
     }
