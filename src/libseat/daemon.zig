@@ -371,11 +371,11 @@ pub const Server = struct {
         while (true) {
             const n = linux.read(self.signal_fd, std.mem.asBytes(&si), @sizeOf(@TypeOf(si)));
             if (posix.errno(n) != .SUCCESS or n != @sizeOf(@TypeOf(si))) return;
-            if (si.signo == @intFromEnum(linux.SIG.USR1)) {
+            if (si.signo == @backingInt(linux.SIG.USR1)) {
                 self.seat.vtRelease();
-            } else if (si.signo == @intFromEnum(linux.SIG.USR2)) {
+            } else if (si.signo == @backingInt(linux.SIG.USR2)) {
                 self.seat.vtActivate();
-            } else if (si.signo == @intFromEnum(linux.SIG.TERM) or si.signo == @intFromEnum(linux.SIG.INT)) {
+            } else if (si.signo == @backingInt(linux.SIG.TERM) or si.signo == @backingInt(linux.SIG.INT)) {
                 self.running = false;
             }
         }
@@ -423,7 +423,7 @@ pub const Server = struct {
     }
 
     fn handleOpcode(self: *Server, client: *Client, opcode: u16, size: u16) OpenError!void {
-        switch (@as(Opcode, @enumFromInt(opcode))) {
+        switch (@as(Opcode, @fromBackingInt(@intCast(opcode)))) {
             .client_open_seat => {
                 if (size != 0) return error.Protocol;
                 try self.handleOpenSeat(client);
@@ -487,7 +487,7 @@ fn handleCloseSeat(client: *Client) OpenError!void {
 
 fn handleOpenDevice(client: *Client, path: []const u8) OpenError!void {
     if (client.seat == null) return error.Protocol;
-    if (client.state != .active) return sendError(client, @intFromEnum(linux.E.PERM));
+    if (client.state != .active) return sendError(client, @backingInt(linux.E.PERM));
 
     const device = openDevice(client, path) catch |err| {
         return sendError(client, errnoFor(err));
@@ -495,7 +495,7 @@ fn handleOpenDevice(client: *Client, path: []const u8) OpenError!void {
 
     const dup_rc = linux.dup(device.fd);
     if (posix.errno(dup_rc) != .SUCCESS) {
-        return sendError(client, @intFromEnum(linux.E.BADF));
+        return sendError(client, @backingInt(linux.E.BADF));
     }
     const dupfd: i32 = @intCast(dup_rc);
     client.conn.putFd(dupfd) catch return error.OutOfMemory;
@@ -505,7 +505,7 @@ fn handleOpenDevice(client: *Client, path: []const u8) OpenError!void {
 
 fn handleCloseDevice(client: *Client, device_id: i32) OpenError!void {
     if (client.seat == null) return error.Protocol;
-    const device = client.findDevice(device_id) orelse return sendError(client, @intFromEnum(linux.E.BADF));
+    const device = client.findDevice(device_id) orelse return sendError(client, @backingInt(linux.E.BADF));
     closeDevice(client, device);
     try sendHeader(client, .server_device_closed, 0);
 }
@@ -653,7 +653,7 @@ fn deactivateDevice(device: *DeviceEntry) void {
 }
 
 fn sendHeader(client: *Client, opcode: Opcode, size: u16) OpenError!void {
-    client.conn.putValue(Header{ .opcode = @intFromEnum(opcode), .size = size }) catch return error.OutOfMemory;
+    client.conn.putValue(Header{ .opcode = @backingInt(opcode), .size = size }) catch return error.OutOfMemory;
 }
 
 fn sendError(client: *Client, error_code: i32) OpenError!void {
@@ -663,14 +663,14 @@ fn sendError(client: *Client, error_code: i32) OpenError!void {
 
 fn errnoFor(err: anyerror) i32 {
     return switch (err) {
-        error.Perm => @intFromEnum(linux.E.PERM),
-        error.Invalid => @intFromEnum(linux.E.INVAL),
-        error.TooMany => @intFromEnum(linux.E.MFILE),
-        error.AccessDenied => @intFromEnum(linux.E.ACCES),
-        error.FileNotFound => @intFromEnum(linux.E.NOENT),
-        error.NameTooLong => @intFromEnum(linux.E.NAMETOOLONG),
-        error.OpenFailed => @intFromEnum(linux.E.IO),
-        else => @intFromEnum(linux.E.IO),
+        error.Perm => @backingInt(linux.E.PERM),
+        error.Invalid => @backingInt(linux.E.INVAL),
+        error.TooMany => @backingInt(linux.E.MFILE),
+        error.AccessDenied => @backingInt(linux.E.ACCES),
+        error.FileNotFound => @backingInt(linux.E.NOENT),
+        error.NameTooLong => @backingInt(linux.E.NAMETOOLONG),
+        error.OpenFailed => @backingInt(linux.E.IO),
+        else => @backingInt(linux.E.IO),
     };
 }
 
@@ -811,7 +811,7 @@ const FakeVt = struct {
 
 fn expectHeader(conn: *Connection, opcode: Opcode) !void {
     const h = try conn.getValue(Header);
-    try testing.expectEqual(@intFromEnum(opcode), h.opcode);
+    try testing.expectEqual(@backingInt(opcode), h.opcode);
     if (opcode == .server_seat_opened) {
         const so = try conn.getValue(protocol.ServerSeatOpened);
         conn.skip(so.seat_name_len);

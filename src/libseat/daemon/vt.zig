@@ -79,7 +79,7 @@ pub const LinuxVt = struct {
 
     fn openTty(n: i32) ?i32 {
         var buf: [16]u8 = undefined;
-        const path = std.fmt.bufPrintZ(&buf, "/dev/tty{d}", .{n}) catch return null;
+        const path = std.mem.printSentinel(&buf, "/dev/tty{d}", .{n}, 0) catch return null;
         const rc = linux.openat(linux.AT.FDCWD, path.ptr, .{ .ACCMODE = .RDWR, .NOCTTY = true }, 0);
         if (posix.errno(rc) != .SUCCESS) return null;
         return @intCast(rc);

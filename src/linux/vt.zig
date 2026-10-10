@@ -17,8 +17,8 @@ pub const PROCESS = 0x01;
 pub const ACKACQ = 0x02;
 
 /// Signals the kernel raises for process-controlled VT switching.
-pub const relsig: i16 = @intFromEnum(std.os.linux.SIG.USR1);
-pub const acqsig: i16 = @intFromEnum(std.os.linux.SIG.USR2);
+pub const relsig: i16 = @backingInt(std.os.linux.SIG.USR1);
+pub const acqsig: i16 = @backingInt(std.os.linux.SIG.USR2);
 
 /// struct vt_mode
 pub const Mode = extern struct {

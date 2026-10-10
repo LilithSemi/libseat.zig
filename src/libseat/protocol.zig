@@ -76,11 +76,11 @@ pub const ServerError = extern struct {
 };
 
 test "opcode values match upstream protocol.h" {
-    try std.testing.expectEqual(@as(u16, 1), @intFromEnum(Opcode.client_open_seat));
-    try std.testing.expectEqual(@as(u16, 7), @intFromEnum(Opcode.client_ping));
-    try std.testing.expectEqual(@as(u16, 0x8001), @intFromEnum(Opcode.server_seat_opened));
-    try std.testing.expectEqual(@as(u16, 0x8008), @intFromEnum(Opcode.server_session_switched));
-    try std.testing.expectEqual(@as(u16, 0xFFFF), @intFromEnum(Opcode.server_error));
+    try std.testing.expectEqual(@as(u16, 1), @backingInt(Opcode.client_open_seat));
+    try std.testing.expectEqual(@as(u16, 7), @backingInt(Opcode.client_ping));
+    try std.testing.expectEqual(@as(u16, 0x8001), @backingInt(Opcode.server_seat_opened));
+    try std.testing.expectEqual(@as(u16, 0x8008), @backingInt(Opcode.server_session_switched));
+    try std.testing.expectEqual(@as(u16, 0xFFFF), @backingInt(Opcode.server_error));
 }
 
 test "struct sizes match the C wire layout" {

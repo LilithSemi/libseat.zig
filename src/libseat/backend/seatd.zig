@@ -72,7 +72,7 @@ pub const Backend = struct {
         var n: usize = 0;
         while (true) {
             const header = self.conn.peekValue(Header) catch return n;
-            switch (@as(Opcode, @enumFromInt(header.opcode))) {
+            switch (@as(Opcode, @fromBackingInt(@intCast(header.opcode)))) {
                 .server_pong => {
                     self.conn.skip(@sizeOf(Header));
                     self.awaiting_pong = false;
@@ -80,7 +80,7 @@ pub const Backend = struct {
                 },
                 .server_enable_seat, .server_disable_seat => {
                     self.conn.skip(@sizeOf(Header));
-                    self.pending.append(self.gpa, @enumFromInt(header.opcode)) catch return Error.OutOfMemory;
+                    self.pending.append(self.gpa, @fromBackingInt(@intCast(header.opcode))) catch return Error.OutOfMemory;
                     n += 1;
                 },
                 else => {
@@ -108,8 +108,8 @@ pub const Backend = struct {
     /// decoded into `owner.last_errno` and surfaced as `Error.Denied`.
     fn readReply(self: *Backend, expected: Opcode, expected_size: u16, variable: bool) Error!u16 {
         const header = self.conn.getValue(Header) catch return self.fail();
-        if (header.opcode != @intFromEnum(expected)) {
-            if (@as(Opcode, @enumFromInt(header.opcode)) == .server_error and
+        if (header.opcode != @backingInt(expected)) {
+            if (@as(Opcode, @fromBackingInt(@intCast(header.opcode))) == .server_error and
                 header.size == @sizeOf(protocol.ServerError))
             {
                 const emsg = self.conn.getValue(protocol.ServerError) catch return self.fail();
@@ -152,12 +152,12 @@ pub const Backend = struct {
     }
 
     fn sendPing(self: *Backend) Error!void {
-        self.conn.putValue(Header{ .opcode = @intFromEnum(Opcode.client_ping), .size = 0 }) catch return Error.OutOfMemory;
+        self.conn.putValue(Header{ .opcode = @backingInt(Opcode.client_ping), .size = 0 }) catch return Error.OutOfMemory;
         self.conn.flush() catch return self.fail();
     }
 
     pub fn handshake(self: *Backend) Error!void {
-        self.conn.putValue(Header{ .opcode = @intFromEnum(Opcode.client_open_seat), .size = 0 }) catch return Error.OutOfMemory;
+        self.conn.putValue(Header{ .opcode = @backingInt(Opcode.client_open_seat), .size = 0 }) catch return Error.OutOfMemory;
         try self.awaitReply();
 
         const size = try self.readReply(.server_seat_opened, @sizeOf(protocol.ServerSeatOpened), true);
@@ -174,7 +174,7 @@ pub const Backend = struct {
 
     pub fn close(self: *Backend) void {
         if (!self.failed) {
-            self.conn.putValue(Header{ .opcode = @intFromEnum(Opcode.client_close_seat), .size = 0 }) catch {};
+            self.conn.putValue(Header{ .opcode = @backingInt(Opcode.client_close_seat), .size = 0 }) catch {};
             if (self.awaitReply()) |_| {
                 _ = self.readReply(.server_seat_closed, 0, false) catch {};
             } else |_| {}
@@ -198,7 +198,7 @@ pub const Backend = struct {
 
         const msg = protocol.ClientOpenDevice{ .path_len = @intCast(path_len) };
         self.conn.putValue(Header{
-            .opcode = @intFromEnum(Opcode.client_open_device),
+            .opcode = @backingInt(Opcode.client_open_device),
             .size = @intCast(@sizeOf(protocol.ClientOpenDevice) + path_len),
         }) catch return Error.OutOfMemory;
         self.conn.putValue(msg) catch return Error.OutOfMemory;
@@ -218,7 +218,7 @@ pub const Backend = struct {
         if (device_id < 0) return Error.InvalidArgument;
 
         self.conn.putValue(Header{
-            .opcode = @intFromEnum(Opcode.client_close_device),
+            .opcode = @backingInt(Opcode.client_close_device),
             .size = @sizeOf(protocol.ClientCloseDevice),
         }) catch return Error.OutOfMemory;
         self.conn.putValue(protocol.ClientCloseDevice{ .device_id = device_id }) catch return Error.OutOfMemory;
@@ -233,7 +233,7 @@ pub const Backend = struct {
         if (session < 0) return Error.InvalidArgument;
 
         self.conn.putValue(Header{
-            .opcode = @intFromEnum(Opcode.client_switch_session),
+            .opcode = @backingInt(Opcode.client_switch_session),
             .size = @sizeOf(protocol.ClientSwitchSession),
         }) catch return Error.OutOfMemory;
         self.conn.putValue(protocol.ClientSwitchSession{ .session = session }) catch return Error.OutOfMemory;
@@ -245,7 +245,7 @@ pub const Backend = struct {
 
     pub fn disable(self: *Backend) Error!void {
         if (self.failed) return Error.Disconnected;
-        self.conn.putValue(Header{ .opcode = @intFromEnum(Opcode.client_disable_seat), .size = 0 }) catch return Error.OutOfMemory;
+        self.conn.putValue(Header{ .opcode = @backingInt(Opcode.client_disable_seat), .size = 0 }) catch return Error.OutOfMemory;
         try self.awaitReply();
 
         _ = try self.readReply(.server_seat_disabled, 0, false);

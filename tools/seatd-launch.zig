@@ -86,7 +86,7 @@ pub fn main(init: std.process.Init) u8 {
 
     return switch (term) {
         .exited => |code| code,
-        .signal => |s| 128 +% @as(u8, @truncate(@intFromEnum(s))),
+        .signal => |s| 128 +% @as(u8, @truncate(@backingInt(s))),
         else => 1,
     };
 }

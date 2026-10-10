@@ -58,7 +58,7 @@
           default = pkgs.mkShell {
             name = "libseat-zig-dev-shell";
             packages = with pkgs; [
-              zig
+              zig_0_17
             ];
           };
         }
@@ -75,13 +75,13 @@
 
             src = lib.cleanSource ./.;
 
-            zigDeps = pkgs.zig.fetchDeps {
+            zigDeps = pkgs.zig_0_17.fetchDeps {
               inherit (finalAttrs) src pname version;
-              hash = "sha256-63x8SeDW7iQUSO+eLkN61j7CjY0a5hQ6qPe7oK7Pe+c=";
+              hash = "sha256-uyvOeIaDJSp7w3SRx2JJULO7IWPPV//0y62JN+dvHes=";
             };
 
             nativeBuildInputs = with pkgs; [
-              zig
+              zig_0_17
             ];
 
             postConfigure = ''

@@ -24,7 +24,7 @@ pub const Dir = enum(u2) {
 };
 
 pub fn IOC(dir: Dir, io_type: u8, nr: u8, size: usize) u32 {
-    return (@as(u32, @intFromEnum(dir)) << dir_shift) |
+    return (@as(u32, @backingInt(dir)) << dir_shift) |
         (@as(u32, io_type) << type_shift) |
         (@as(u32, nr) << nr_shift) |
         (@as(u32, @intCast(size)) << size_shift);

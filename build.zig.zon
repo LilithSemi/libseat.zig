@@ -1,12 +1,12 @@
 .{
     .name = .libseat,
     .version = "0.1.0",
-    .minimum_zig_version = "0.16.0",
+    .minimum_zig_version = "0.17.0",
     .fingerprint = 0x16b6a2a73c4a2ab,
     .dependencies = .{
         .dbus = .{
-            .url = "git+https://git.lilithsemi.com/LilithSemi/dbus.zig#2d8f179d202f002eb490d4d0636c066003d9fbb4",
-            .hash = "dbus-0.1.0-8F4MwHAvBACyrhHqEeT4UwRn9cHvu5N3mwS7e_hqDyGF",
+            .url = "git+https://git.lilithsemi.com/LilithSemi/dbus.zig#ac21c343ceee75c0a5ea1793096751ca851abfa1",
+            .hash = "dbus-0.1.0-8F4MwG8vBAC1eyINQZ4xQIwrt9zl9M5D1LgTdzoFlvMl",
         },
     },
     .paths = .{ "build.zig.zon", "build.zig", "src", "tools" },
